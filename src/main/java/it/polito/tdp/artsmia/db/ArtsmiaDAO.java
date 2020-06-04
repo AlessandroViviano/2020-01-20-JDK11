@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.polito.tdp.artsmia.model.Adiacenza;
 import it.polito.tdp.artsmia.model.ArtObject;
 import it.polito.tdp.artsmia.model.Exhibition;
 
@@ -61,6 +62,88 @@ public class ArtsmiaDAO {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return null;
+		}
+	}
+	
+	public List<Adiacenza> getAdiacenze(String ruolo){
+		String sql = "SELECT a1.artist_id AS a1, a2.artist_id AS a2, COUNT(DISTINCT eo1.exhibition_id) AS peso " + 
+				"FROM artists AS a1, artists AS a2, authorship AS au1, " + 
+				"authorship AS au2, exhibition_objects AS eo1, " + 
+				"exhibition_objects AS eo2 " + 
+				"WHERE au1.role = ? AND au2.role = ? " + 
+				"AND au1.artist_id = a1.artist_id AND " + 
+				"au2.artist_id = a2.artist_id AND " + 
+				"au1.object_id = eo1.object_id AND " + 
+				"au2.object_id = eo2.object_id AND " + 
+				"eo1.exhibition_id = eo2.exhibition_id " + 
+				"AND a1.artist_id > a2.artist_id " + 
+				"GROUP BY a1.artist_id, a2.artist_id";
+		
+		List<Adiacenza> adiacenze = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, ruolo);
+			st.setString(2, ruolo);
+			
+			ResultSet rs = st.executeQuery();
+			while(rs.next()) {
+				adiacenze.add(new Adiacenza(rs.getInt("a1"), rs.getInt("a2"), rs.getInt("peso")));
+			}
+					
+			conn.close();
+			return adiacenze;
+		}catch(SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("Errore di connessione al database", e);
+		}
+	}
+
+	public List<String> getRuoli() {
+		String sql = "SELECT DISTINCT role " + 
+				"FROM authorship ORDER BY role ASC";
+		
+		List<String> ruoli = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			ResultSet rs = st.executeQuery();
+			while(rs.next()) {
+				ruoli.add(rs.getString("role"));
+			}
+			
+			conn.close();
+			return ruoli;
+			
+		}catch(SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("Errore di connessione al database", e);
+		}	
+	}
+	
+	public List<Integer> getArtisti(String ruolo){
+		String sql = "SELECT DISTINCT au.artist_id " + 
+				"FROM authorship AS au, artists AS a " + 
+				"WHERE au.artist_id = a.artist_id AND " + 
+				"au.role = ?";
+		
+		List<Integer> artisti = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, ruolo);
+			
+			ResultSet rs = st.executeQuery();
+			while(rs.next()) {
+				artisti.add(rs.getInt("au.artist_id"));
+			}
+			
+			conn.close();
+			return artisti;
+		}catch(SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("Errore di connessione al database", e);
 		}
 	}
 	
